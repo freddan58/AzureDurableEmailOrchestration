@@ -1,0 +1,114 @@
+trigger:
+- main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  functionAppName: 'test-email-orchestration-app'
+  resourceGroupName: 'rg-test-email-app'
+  azureServiceConnection: 'TestServiceConnection'
+  zipDeployPublishUrl: 'https://test-email-orchestration-app.scm.azurewebsites.net/api/zipdeploy'
+  zipDeployUserName: '$test-email-orchestration-app'
+  zipDeployPassword: 'FakePassword123!@#'
+
+jobs:
+- job: BuildAndPackage
+  displayName: 'Build and Package the Function App'
+  steps:
+    - task: UseDotNet@2
+      inputs:
+        packageType: 'sdk'
+        version: '8.x'
+      displayName: 'Install .NET SDK'
+
+    - checkout: self
+      displayName: 'Checkout Code'
+
+    - task: DotNetCoreCLI@2
+      displayName: 'Restore dependencies'
+      inputs:
+        command: 'restore'
+        projects: '**/*.csproj'
+
+    - task: DotNetCoreCLI@2
+      displayName: 'Build the project'
+      inputs:
+        command: 'build'
+        projects: '**/*.csproj'
+        arguments: '--configuration Release --no-restore'
+
+    - task: DotNetCoreCLI@2
+      displayName: 'Publish the project'
+      inputs:
+        command: 'publish'
+        projects: '**/*.csproj'
+        arguments: '--configuration Release --no-build --output $(System.DefaultWorkingDirectory)/published'
+        publishWebProjects: false
+
+    - task: ArchiveFiles@2
+      displayName: 'Create zip package for Function App'
+      inputs:
+        rootFolderOrFile: '$(System.DefaultWorkingDirectory)/published'
+        includeRootFolder: false
+        archiveType: 'zip'
+        archiveFile: '$(Build.ArtifactStagingDirectory)/$(functionAppName).zip'
+        replaceExistingArchive: true
+
+    - task: PublishPipelineArtifact@1
+      displayName: 'Publish Artifact for Deployment'
+      inputs:
+        targetPath: '$(Build.ArtifactStagingDirectory)'
+        artifact: 'functionapp'
+
+- job: DeployToAzure
+  displayName: 'Deploy Function App via ZipDeploy'
+  dependsOn: BuildAndPackage
+  steps:
+    - task: DownloadPipelineArtifact@2
+      displayName: 'Download Artifact'
+      inputs:
+        buildType: 'current'
+        artifactName: 'functionapp'
+        targetPath: '$(System.DefaultWorkingDirectory)/download'
+
+    - script: |
+        echo "Deploying using ZipDeploy..."
+        curl -X POST -u "$(zipDeployUserName):$(zipDeployPassword)" \
+        --data-binary @"$(System.DefaultWorkingDirectory)/download/$(functionAppName).zip" \
+        "$(zipDeployPublishUrl)"
+      displayName: 'Deploy using ZipDeploy'
+
+    - task: AzureAppServiceSettings@1
+      displayName: 'Set Azure App Service Application Settings'
+      inputs:
+        resourceGroupName: ${{ variables.resourceGroupName }}
+        azureSubscription: ${{ variables.azureServiceConnection }}
+        appName: $(functionAppName)
+        appSettings: |
+          [
+            {"name": "AzureWebJobsStorage", "value": "DefaultEndpointsProtocol=https;AccountName=teststorageaccount;AccountKey=FakeKey1234567890abcdefg==;EndpointSuffix=core.windows.net"},
+            {"name": "FUNCTIONS_WORKER_RUNTIME", "value": "dotnet-isolated"},
+            {"name": "APPINSIGHTS_INSTRUMENTATIONKEY", "value": "fake-instrumentation-key-1234567890"},
+            {"name": "APPLICATIONINSIGHTS_CONNECTION_STRING", "value": "InstrumentationKey=fake-instrumentation-key-1234567890;IngestionEndpoint=https://testregion-1.in.applicationinsights.azure.com/;LiveEndpoint=https://testregion.livediagnostics.monitor.azure.com/;ApplicationId=fake-app-id-123456"},
+            {"name": "EmailSendDelayMilliseconds", "value": "2000"},
+            {"name": "QtyEmails", "value": "15"},
+            {"name": "BrevoAPIKey", "value": "fake-brevo-api-key-1234567890abcdef"},
+            {"name": "BrevoApiUrl", "value": "https://api.testbrevo.com/v3/smtp/email"},
+            {"name": "Servers", "value": "[{\"GetEmailsToSendEndpoint\": \"https://api.testserver.com/email/v1/get-emails?limit=10\", \"GetEmailBodyEndpoint\": \"https://api.testserver.com/email/v1/get-body\", \"UpdateEmailSendStatusEndpoint\": \"https://api.testserver.com/email/v1/update-status\", \"GetSubDomain\": \"TestDomainA\"}, {\"GetEmailsToSendEndpoint\": \"https://api.testserver.com/email/v1/get-emails?limit=10\", \"GetEmailBodyEndpoint\": \"https://api.testserver.com/email/v1/get-body\", \"UpdateEmailSendStatusEndpoint\": \"https://api.testserver.com/email/v1/update-status\", \"GetSubDomain\": \"TestDomainB\"}, {\"GetEmailsToSendEndpoint\": \"https://api.testserver.com/email/v1/get-emails?limit=10\", \"GetEmailBodyEndpoint\": \"https://api.testserver.com/email/v1/get-body\", \"UpdateEmailSendStatusEndpoint\": \"https://api.testserver.com/email/v1/update-status\", \"GetSubDomain\": \"TestDomainC\"}, {\"GetEmailsToSendEndpoint\": \"https://api.testserver.com/email/v1/get-emails?limit=10\", \"GetEmailBodyEndpoint\": \"https://api.testserver.com/email/v1/get-body\", \"UpdateEmailSendStatusEndpoint\": \"https://api.testserver.com/email/v1/update-status\", \"GetSubDomain\": \"TestDomainD\"}, {\"GetEmailsToSendEndpoint\": \"https://api.testserver.com/email/v1/get-emails?limit=10\", \"GetEmailBodyEndpoint\": \"https://api.testserver.com/email/v1/get-body\", \"UpdateEmailSendStatusEndpoint\": \"https://api.testserver.com/email/v1/update-status\", \"GetSubDomain\": \"TestDomainE\"}, {\"GetEmailsToSendEndpoint\": \"https://api.testserver.com/email/v1/get-emails?limit=10\", \"GetEmailBodyEndpoint\": \"https://api.testserver.com/email/v1/get-body\", \"UpdateEmailSendStatusEndpoint\": \"https://api.testserver.com/email/v1/update-status\", \"GetSubDomain\": \"TestDomainF\"}]"},
+            {"name": "AZURE_FUNCTIONS_ENVIRONMENT", "value": "Production"},
+            {"name": "maxParallelClients", "value": "5"},
+            {"name": "batchSize", "value": "15"},
+            {"name": "timeoutSmtp", "value": "5000"},
+            {"name": "delaySmtpException", "value": "2000"}
+          ]
+
+    # Restart Azure Function after deployment
+    - task: AzureCLI@2
+      inputs:
+        azureSubscription: ${{ variables.azureServiceConnection }}
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          az functionapp restart --name ${{ variables.functionAppName }} --resource-group ${{ variables.resourceGroupName }}
+      displayName: 'Restart Azure Function App'

@@ -1,0 +1,40 @@
+{
+  "Servers": [
+    {
+      "GetEmailsToSendEndpoint": "https://api.testserver.com/email/v1/get-emails?limit=10",
+      "GetEmailBodyEndpoint": "https://api.testserver.com/email/v1/get-body",
+      "UpdateEmailSendStatusEndpoint": "https://api.testserver.com/email/v1/update-status",
+      "GetSubDomain": "TestDomainA"
+    },
+    {
+      "GetEmailsToSendEndpoint": "https://api.testserver.com/email/v1/get-emails?limit=10",
+      "GetEmailBodyEndpoint": "https://api.testserver.com/email/v1/get-body",
+      "UpdateEmailSendStatusEndpoint": "https://api.testserver.com/email/v1/update-status",
+      "GetSubDomain": "TestDomainB"
+    },
+    {
+      "GetEmailsToSendEndpoint": "https://api.testserver.com/email/v1/get-emails?limit=10",
+      "GetEmailBodyEndpoint": "https://api.testserver.com/email/v1/get-body",
+      "UpdateEmailSendStatusEndpoint": "https://api.testserver.com/email/v1/update-status",
+      "GetSubDomain": "TestDomainC"
+    },
+    {
+      "GetEmailsToSendEndpoint": "https://api.testserver.com/email/v1/get-emails?limit=10",
+      "GetEmailBodyEndpoint": "https://api.testserver.com/email/v1/get-body",
+      "UpdateEmailSendStatusEndpoint": "https://api.testserver.com/email/v1/update-status",
+      "GetSubDomain": "TestDomainD"
+    },
+    {
+      "GetEmailsToSendEndpoint": "https://api.testserver.com/email/v1/get-emails?limit=10",
+      "GetEmailBodyEndpoint": "https://api.testserver.com/email/v1/get-body",
+      "UpdateEmailSendStatusEndpoint": "https://api.testserver.com/email/v1/update-status",
+      "GetSubDomain": "TestDomainE"
+    },
+    {
+      "GetEmailsToSendEndpoint": "https://api.testserver.com/email/v1/get-emails?limit=10",
+      "GetEmailBodyEndpoint": "https://api.testserver.com/email/v1/get-body",
+      "UpdateEmailSendStatusEndpoint": "https://api.testserver.com/email/v1/update-status",
+      "GetSubDomain": "TestDomainF"
+    }
+  ]
+}
